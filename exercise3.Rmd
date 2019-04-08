@@ -1,0 +1,62 @@
+---
+title: "exercise3"
+output: pdf_document
+---
+
+### Question 1 (collaboration on code with Linh Nguyen)
+
+Using a singlo lasso and a sparse matrix was determined to be the most effective way to model price.  Using these methods, the resulting graphs were created (used to optimize AIC):
+```{r include=FALSE}
+#loading library
+library(gamlr) 
+
+data<-read.csv("~/Downloads/greenbuildings.csv")
+n = nrow(data)
+
+data <- na.omit(data)
+sum(is.na(data))
+```
+
+```{r echo=FALSE}
+#seperate the data based on contract type
+data$payment <- ifelse(data$net == 0 , "gross contract" , "net contract")
+
+#seperate the data based on green building type
+data$green_type <- ifelse (data$green_rating == 0, 'Non-green' , 'Green')
+
+scx = sparse.model.matrix(Rent ~ .*data$green_rating, data=data)[,-1] 
+scy = data$Rent
+
+# fit a single lasso
+sclasso = gamlr(scx, data$Rent)
+```
+
+```{r include=FALSE}
+# AIC selected coef
+AICc(sclasso)
+```
+
+```{r echo=FALSE}
+plot(sclasso$lambda, AICc(sclasso))
+plot(log(sclasso$lambda), AICc(sclasso))
+# the coefficients at the AIC-optimizing value
+```
+
+In order to to quantify the average change in rental income per square foot associated with green certification, and to assess whether the "green certification" effect is different for different buildings, we display the coefficients from the lasso model:
+```{r echo=FALSE}
+scbeta = coef(sclasso) 
+scbeta
+```
+
+
+Suprisingly, using the coefficient of 0 from "data$green_rating", it appears rent does not differ as a whole between green and non-green apartments.  However, we can see small differences in rent based upon certain characteristics.  For example, rent increases by .39 units when the apartment is a green class b apartment.  The rest of these effects are displayed on the above matrix.  Every coefficient within the "green_rating" section shows how much rent differs based upon every individual attribute when the apartment is green.
+
+### Question 2
+
+1.  This method will not work because cities of different sizes will only have different amounts of cops due to differing crime rates.  Since bigger cities with high crime rates need more cops, this cannot prove that a higher amount of cops help suppress crime more effectively.  
+
+2.  In order to isolate the effect, the researchers found a specific example where the amount of cops increased for reasons besides crime rates.  The example was having increased police force in Washington D.C. when the threat of terrorism was heightened, known as a high-alert day.  When the data was examined, it was revealed that crime did go down on these high-alert days.  Holding all else fixed, when it was a high-alert day, crime decreased by approximately 6.046 units, controlling for the METRO ridership.
+
+3.  The researchers needed to control for METRO ridership in order to determine if less people would be out and about (hence less victims for criminals) due to the elevated terror level.  They found that the same numbers of people were riding the METRO on high-alert days compared to any other day.
+
+4.  Table 4 explores how the number of crimes on high-alert days decreased in a specific area, district 1.  This was achieved via two interaction variables: high-alert*district 1, and high-alert*other districts.  The dummy variables would only be activated if the data took place in the district of interest.  So, this allowed for comparison between how much crime decreased in district 1 versus all of the other districts.  It appears district 1 saw crime decrease by more than the other districts as a whole, as on high-alert days crime in district 1 decreased by 2.621 units and in all other districts on high-alert day crime decreased by .571 units (holding all else fixed).
